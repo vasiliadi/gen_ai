@@ -3,11 +3,15 @@ import os
 from io import BytesIO
 from base64 import b64encode
 from PIL import Image
-import anthropic
+from anthropic import Anthropic
 import google.generativeai as genai
 
 claude_api_key = os.environ['CLAUDE_API_KEY']
 gemini_api_key = os.environ['GEMINI_API_KEY']
+
+anthropic_model = Anthropic(api_key=claude_api_key)
+anthropic_model_variation = 'claude-3-opus-20240229'
+
 genai.configure(api_key=gemini_api_key)
 gemini_model = genai.GenerativeModel('gemini-pro')
 
@@ -21,10 +25,11 @@ if img_file is not None:
     img_data = b64encode(buffered.getvalue()).decode('utf-8')
 
     with st.spinner('Working on the classification of the objects in the photo and generating a recipes'):
-        message = anthropic.Anthropic(api_key=claude_api_key).messages.create(
-            model='claude-3-opus-20240229',
-            max_tokens=2048,
-            messages=[
+
+        message = anthropic_model.messages.create(
+            model = anthropic_model_variation,
+            max_tokens = 2048,
+            messages = [
                 {
                     'role': 'user',
                     'content': [
@@ -48,6 +53,7 @@ if img_file is not None:
 
         food = message.content[0].text
         st.markdown(f'Claude 3 Opus model detects next food in your fridge: {food}.')
+
         recipes = gemini_model.generate_content(f'Suggest 5 recipes for this food list: {food}.')
 
     st.divider()
