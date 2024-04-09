@@ -5,57 +5,98 @@ from base64 import b64encode
 from PIL import Image
 from anthropic import Anthropic
 import google.generativeai as genai
+import requests
 
-claude_api_key = os.environ['CLAUDE_API_KEY']
-gemini_api_key = os.environ['GEMINI_API_KEY']
+claude_api_key = os.environ["CLAUDE_API_KEY"]
+gemini_api_key = os.environ["GEMINI_API_KEY"]
+stability_api_key = os.environ["STABILITY_API_KEY"]
 
 anthropic_model = Anthropic(api_key=claude_api_key)
-anthropic_model_variation = 'claude-3-opus-20240229'
+anthropic_model_variation = "claude-3-opus-20240229"
 
 genai.configure(api_key=gemini_api_key)
-gemini_model = genai.GenerativeModel('gemini-pro')
+gemini_model = genai.GenerativeModel("gemini-pro")
 
 st.title("Take a picture of what's inside your fridge and get five recipes")
-img_file = st.camera_input('')
+img_file = st.camera_input("")
+# img_file = st.file_uploader("Choose a file")
 
 if img_file is not None:
     img = Image.open(img_file)
     buffered = BytesIO()
-    img.save(buffered, format='jpeg')
-    img_data = b64encode(buffered.getvalue()).decode('utf-8')
+    img.save(buffered, format="jpeg")
+    img_data = b64encode(buffered.getvalue()).decode("utf-8")
 
-    with st.spinner('Working on the classification of the objects in the photo and generating a recipes'):
+    with st.spinner("Working on the classification of the objects in the photo."):
 
         message = anthropic_model.messages.create(
-            model = anthropic_model_variation,
-            max_tokens = 2048,
-            messages = [
+            model=anthropic_model_variation,
+            max_tokens=2048,
+            messages=[
                 {
-                    'role': 'user',
-                    'content': [
+                    "role": "user",
+                    "content": [
                         {
-                            'type': 'text',
-                            'text': 'Extract only a list of various food visible in this photo. List only the food separated by comma.'
+                            "type": "text",
+                            "text": "Extract only a list of various food visible in this photo. List only the food separated by comma.",
                         },
                         {
-                            'type': 'image',
-                            'source': {
-                                'type': 'base64',
-                                'media_type': 'image/jpeg',
-                                'data': img_data,
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": "image/jpeg",
+                                "data": img_data,
                             },
-                        }
-
+                        },
                     ],
                 }
             ],
         )
 
         food = message.content[0].text
-        st.markdown(f'Claude 3 Opus model detects next food in your fridge: {food}.')
+        st.markdown(
+            f"**Claude 3 Opus** model detects next food in your fridge: **{food}**."
+        )
+        st.divider()
 
-        recipes = gemini_model.generate_content(f'Suggest 5 recipes for this food list: {food}.')
+    with st.spinner("Generating 5 recipes and how the finished dishes might look."):
+        recipes = gemini_model.generate_content(
+            f"Suggest 5 recipes for this food list: {food}."
+        )
+        recipes_dict = anthropic_model.messages.create(
+            model=anthropic_model_variation,
+            max_tokens=2048,
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"Split {recipes.text}"
+                    + " to five recipes and return python dict with next format {'Recipe name':'Other data'}. For example {'Lemon-Avocado Vinaigrette':'Blend together lemon juice, olive oil, avocado, salt, and pepper. Use as a dressing for salads or grilled vegetables.', 'Stuffed Bell Peppers with Carrot and Asparagus':'Cut bell peppers in half and scoop out seeds. Fill with a mixture of chopped carrots, asparagus, onion, and seasonings. Bake until vegetables are tender.'} Do not add any other data then you get.",
+                }
+            ],
+        )
 
-    st.divider()
-    st.markdown('Here are 5 recipes for you from Gemini-Pro model.')
-    st.markdown(recipes.text)
+        recipes_dict = eval(recipes_dict.content[0].text)
+
+        for i in range(len(recipes_dict)):
+            stabilityai_prompt = gemini_model.generate_content(
+                f"Generate prompt for stable diffusion without negative_prompt for {list(recipes_dict.keys())[i]}: {recipes_dict[list(recipes_dict.keys())[i]]} recipt"
+            )
+            stabilityai_image = requests.post(
+                f"https://api.stability.ai/v2beta/stable-image/generate/core",
+                headers={
+                    "authorization": f"Bearer {stability_api_key}",
+                    "accept": "image/*",
+                },
+                files={"none": ""},
+                data={
+                    "prompt": stabilityai_prompt.text,
+                    "negative_prompt": "Blurry, Out of focus, Unrealistic colors, Low quality",
+                    "output_format": "jpeg",
+                },
+            )
+
+            st.markdown(f"**{list(recipes_dict.keys())[i]}** by Gemini-Pro")
+            st.markdown(recipes_dict[list(recipes_dict.keys())[i]])
+            st.image(stabilityai_image.content)
+            st.text("Image generated by Stable Diffusion with prompt from Gemini-Pro")
+            st.divider()

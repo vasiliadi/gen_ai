@@ -2,3 +2,4 @@ streamlit
 pillow
 anthropic
 google-generativeai
+requests
