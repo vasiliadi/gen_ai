@@ -1,5 +1,5 @@
 streamlit==1.33.0
 Pillow==10.0.0
-anthropic==0.19.1
+anthropic==0.34.1
 google-generativeai==0.5.1
 requests==2.31.0
