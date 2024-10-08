@@ -1,6 +1,6 @@
 # Generative AI
 
-![Python](https://img.shields.io/badge/Python-3.11-blue)
+![Python](https://img.shields.io/badge/Python-3.11_|_3.12-blue)
 
 Generative AI models learn patterns and relationships from an input training dataset. They then use these patterns to generate new data that has similar characteristics. Generative AI is powered by foundation models, which are large AI models that can perform tasks like summary, Q&A, and classification.
 
