@@ -7,6 +7,10 @@ from anthropic import Anthropic
 import google.generativeai as genai
 import requests
 
+# from dotenv import load_dotenv
+
+# load_dotenv()
+
 claude_api_key = os.environ["CLAUDE_API_KEY"]
 gemini_api_key = os.environ["GEMINI_API_KEY"]
 stability_api_key = os.environ["STABILITY_API_KEY"]
