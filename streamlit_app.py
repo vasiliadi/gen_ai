@@ -1,11 +1,12 @@
-import streamlit as st
 import os
-from io import BytesIO
 from base64 import b64encode
-from PIL import Image
-from anthropic import Anthropic
+from io import BytesIO
+
 import google.generativeai as genai
 import requests
+import streamlit as st
+from anthropic import Anthropic
+from PIL import Image
 
 # from dotenv import load_dotenv
 
@@ -16,7 +17,7 @@ gemini_api_key = os.environ["GEMINI_API_KEY"]
 stability_api_key = os.environ["STABILITY_API_KEY"]
 
 anthropic_model = Anthropic(api_key=claude_api_key)
-anthropic_model_variation = "claude-3-opus-20240229"
+ANTHROPIC_MODEL_VARIATION = "claude-3-opus-20240229"
 
 genai.configure(api_key=gemini_api_key)
 gemini_model = genai.GenerativeModel("gemini-pro")
@@ -32,9 +33,8 @@ if img_file is not None:
     img_data = b64encode(buffered.getvalue()).decode("utf-8")
 
     with st.spinner("Working on the classification of the objects in the photo."):
-
         message = anthropic_model.messages.create(
-            model=anthropic_model_variation,
+            model=ANTHROPIC_MODEL_VARIATION,
             max_tokens=2048,
             messages=[
                 {
@@ -68,7 +68,7 @@ if img_file is not None:
             f"Suggest 5 recipes for this food list: {food}."
         )
         recipes_dict = anthropic_model.messages.create(
-            model=anthropic_model_variation,
+            model=ANTHROPIC_MODEL_VARIATION,
             max_tokens=2048,
             messages=[
                 {
@@ -86,7 +86,7 @@ if img_file is not None:
                 f"Generate prompt for stable diffusion without negative_prompt for {list(recipes_dict.keys())[i]}: {recipes_dict[list(recipes_dict.keys())[i]]} recipt"
             )
             stabilityai_image = requests.post(
-                f"https://api.stability.ai/v2beta/stable-image/generate/core",
+                "https://api.stability.ai/v2beta/stable-image/generate/core",
                 headers={
                     "authorization": f"Bearer {stability_api_key}",
                     "accept": "image/*",
@@ -97,6 +97,7 @@ if img_file is not None:
                     "negative_prompt": "Blurry, Out of focus, Unrealistic colors, Low quality",
                     "output_format": "jpeg",
                 },
+                timeout=120,
             )
 
             st.markdown(f"**{list(recipes_dict.keys())[i]}** by Gemini-Pro")
