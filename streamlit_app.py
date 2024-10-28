@@ -8,9 +8,10 @@ import streamlit as st
 from anthropic import Anthropic
 from PIL import Image
 
-# from dotenv import load_dotenv
+if os.getenv("ENV") != "PROD":
+    from dotenv import load_dotenv
 
-# load_dotenv()
+    load_dotenv()
 
 claude_api_key = os.environ["CLAUDE_API_KEY"]
 gemini_api_key = os.environ["GEMINI_API_KEY"]
@@ -23,7 +24,7 @@ genai.configure(api_key=gemini_api_key)
 gemini_model = genai.GenerativeModel("gemini-pro")
 
 st.title("Take a picture of what's inside your fridge and get five recipes")
-img_file = st.camera_input("")
+img_file = st.camera_input(label="Take a picture", label_visibility="collapsed")
 # img_file = st.file_uploader("Choose a file")
 
 if img_file is not None:
